@@ -10,3 +10,4 @@ gen
 /src/main/resources/application-dev.yml
 *.yml
 
+/src/main/resources/application-dev.yml
