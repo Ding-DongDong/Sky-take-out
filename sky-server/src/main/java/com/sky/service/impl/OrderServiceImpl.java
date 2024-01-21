@@ -21,6 +21,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
+import com.sky.websocket.WebSocketServer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.PageOrder;
 import org.aspectj.weaver.ast.Or;
@@ -60,6 +61,9 @@ public class OrderServiceImpl implements OrderService{
     private String shopAddress;
     @Value("${sky.baidu.ak}")
     private String ak;
+
+    @Autowired
+    private WebSocketServer webSocketServer;
     /**
      * 用户下单
      * @param orderSubmitDTO
@@ -76,7 +80,7 @@ public class OrderServiceImpl implements OrderService{
         AddressBook addressBook1 = addressBookMapper.getById(addressBook);
 
         //检查用户的收货地址是否超出配送范围
-        checkOutOfRange(addressBook1.getCityName() + addressBook1.getDistrictName() + addressBook1.getDetail());
+//        checkOutOfRange(addressBook1.getCityName() + addressBook1.getDistrictName() + addressBook1.getDetail());
         if(addressBook1 == null){
             //抛出业务异常
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
@@ -174,6 +178,15 @@ public class OrderServiceImpl implements OrderService{
                 .build();
 
         orderMapper.update(orders);
+
+        //通过websocket向客户端浏览器推送消息 type orderId Content
+        Map map = new HashMap();
+        map.put("type",1);//1表示来单提醒 2表示客户催单
+        map.put("orderId", ordersDB.getId());
+        map.put("content", "订单号："+outTradeNo);
+        //转成json字符串
+        String jsonString = JSON.toJSONString(map);
+        webSocketServer.sendToAllClient(jsonString);
     }
 
     /**
